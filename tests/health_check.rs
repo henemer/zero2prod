@@ -1,9 +1,8 @@
 //! tests/health_check.rs
 
+use sqlx::{Connection, PgConnection};
 use std::net::TcpListener;
-use sqlx:: {PgConnection, Connection};
 use zero2prod::configuration::get_configuration;
-
 
 #[tokio::test]
 async fn health_check_works() {
@@ -26,19 +25,19 @@ async fn health_check_works() {
 }
 
 // Launch our application in the backgroud
-fn spawn_app()->String {
+fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     // We retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
 
-    let server  = zero2prod::startup::run(listener).expect("Failed do bin address");
+    let server = zero2prod::startup::run(listener).expect("Failed do bin address");
     let _ = tokio::spawn(server);
-    
+
     // Launch the server as a background task
-    // tokio::spawn returns a handle to the spwned future, 
+    // tokio::spawn returns a handle to the spwned future,
     // byt we have no use for it, hence the non-binding let
-    
+
     format!("http://127.0.0.1:{}", port)
 }
 
@@ -67,7 +66,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     // Assert
     assert_eq!(200, response.status().as_u16());
 
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions", )
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
         .fetch_one(&mut connection)
         .await
         .expect("Failed to fetch saved subscription.");
@@ -85,11 +84,10 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     let test_case = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
-        ("", "missing both name and email")
-        
+        ("", "missing both name and email"),
     ];
-    
-    for(invalid_body, error_message) in test_case {
+
+    for (invalid_body, error_message) in test_case {
         // Act
         let response = client
             .post(&format!("{}/subscriptions", &app_address))
@@ -99,19 +97,14 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
             .await
             .expect("Failed to execute request.");
 
-
         // Assert
 
         assert_eq!(
             400,
             response.status().as_u16(),
             // Aditional customised error message on test failure
-            "The API did not fail with 400 Bad Request when the playload was {}.", 
+            "The API did not fail with 400 Bad Request when the playload was {}.",
             error_message
         );
-
     }
 }
-
-
-    
