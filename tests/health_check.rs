@@ -2,9 +2,9 @@
 
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
+use uuid::Uuid;
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup::run;
-use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
@@ -22,9 +22,8 @@ async fn spawn_app() -> TestApp {
 
     let mut configuration = get_configuration().expect("Failed to read configuration.");
     configuration.database.database_name = Uuid::new_v4().to_string();
-    
-    let connection_pool = configure_database(&configuration.database)
-        .await;
+
+    let connection_pool = configure_database(&configuration.database).await;
 
     let server = run(listener, connection_pool.clone()).expect("Failed do bin address");
     let _ = tokio::spawn(server);
@@ -35,14 +34,14 @@ async fn spawn_app() -> TestApp {
     }
 }
 
-
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Create database
     let mut connection = PgConnection::connect(&config.connection_string_without_db())
         .await
         .expect("Failed do connect to Postgres");
 
-    connection.execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
         .await
         .expect("Failed do create database");
 
@@ -58,7 +57,6 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
 
     connection_pool
 }
-
 
 #[tokio::test]
 async fn health_check_works() {
@@ -80,11 +78,10 @@ async fn health_check_works() {
     assert_eq!(Some(0), response.content_length());
 }
 
-
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    let app:TestApp = spawn_app().await;
+    let app: TestApp = spawn_app().await;
     let client = reqwest::Client::new();
 
     // Act
