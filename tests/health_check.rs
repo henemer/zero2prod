@@ -55,10 +55,9 @@ async fn spawn_app() -> TestApp {
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Create database
-    let mut connection =
-        PgConnection::connect_with(&config.without_db())
-            .await
-            .expect("Failed do connect to Postgres");
+    let mut connection = PgConnection::connect_with(&config.without_db())
+        .await
+        .expect("Failed do connect to Postgres");
 
     connection
         .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
@@ -168,10 +167,13 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty_name"),
         ("name=Ursula&email=", "empty_email"),
-        ("name=Ursula=&email=defenitily-not-an-email", "invalid email"),
+        (
+            "name=Ursula=&email=defenitily-not-an-email",
+            "invalid email",
+        ),
     ];
 
-    for(body, description) in test_cases {
+    for (body, description) in test_cases {
         // Act
         let response = client
             .post(&format!("{}/subscriptions", &app.address))

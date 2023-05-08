@@ -1,8 +1,8 @@
 use secrecy::{ExposeSecret, Secret};
-use sqlx::ConnectOptions;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::postgres::PgSslMode;
+use sqlx::ConnectOptions;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -51,7 +51,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .add_source(
             config::Environment::with_prefix("APP")
                 .prefix_separator("_")
-                .separator("__")
+                .separator("__"),
         )
         .build()?;
 
@@ -91,12 +91,11 @@ impl DatabaseSettings {
     pub fn without_db(&self) -> PgConnectOptions {
         let ssl_mode = if self.require_ssl {
             PgSslMode::Require
-        }
-        else {
+        } else {
             PgSslMode::Prefer
         };
         PgConnectOptions::new()
-            .host(&self.host)    
+            .host(&self.host)
             .username(&self.username)
             .password(&self.password.expose_secret())
             .port(self.port)
@@ -129,5 +128,4 @@ impl DatabaseSettings {
     //         self.database_name
     //     ))
     // }
-
 }
