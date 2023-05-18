@@ -4,10 +4,10 @@ use std::net::TcpListener;
 use uuid::Uuid;
 
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
-use zero2prod::startup::run;
-use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use zero2prod::email_client::EmailClient;
-use zero2prod::startup::{Application, get_connection_pool};
+use zero2prod::startup::run;
+use zero2prod::startup::{get_connection_pool, Application};
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter_level = "info".to_string();
@@ -31,7 +31,7 @@ pub struct TestApp {
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
-    let configuration = { 
+    let configuration = {
         let mut c = get_configuration().expect("Failed do read configuration");
 
         c.database.database_name = Uuid::new_v4().to_string();
@@ -43,7 +43,9 @@ pub async fn spawn_app() -> TestApp {
 
     configure_database(&configuration.database).await;
 
-    let application = Application::build(configuration.clone()).await.expect("Failed to build application");
+    let application = Application::build(configuration.clone())
+        .await
+        .expect("Failed to build application");
     let address = format!("http://127.0.0.1:{}", application.port());
     let _ = tokio::spawn(application.run_until_stopped());
 
@@ -51,7 +53,6 @@ pub async fn spawn_app() -> TestApp {
         address: address,
         db_pool: get_connection_pool(&configuration.database),
     }
-
 }
 
 async fn configure_database(config: &DatabaseSettings) -> PgPool {

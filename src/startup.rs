@@ -1,13 +1,13 @@
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
+use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
-use sqlx::postgres::PgPoolOptions;
 
-use crate::routes::{health_check, subscribe};
+use crate::configuration::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::configuration::{Settings,DatabaseSettings};
+use crate::routes::{health_check, subscribe};
 
 pub struct Application {
     port: u16,
@@ -17,20 +17,28 @@ pub struct Application {
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
         let connection_pool = get_connection_pool(&configuration.database);
-    
-        let sender_email = configuration.email_client.sender().expect("Invalid email address");
+
+        let sender_email = configuration
+            .email_client
+            .sender()
+            .expect("Invalid email address");
         let timeout = configuration.email_client.timeout();
-        let email_client = EmailClient::new(configuration.email_client.base_url, sender_email, configuration.email_client.authorization_token, timeout);
+        let email_client = EmailClient::new(
+            configuration.email_client.base_url,
+            sender_email,
+            configuration.email_client.authorization_token,
+            timeout,
+        );
         let address = format!(
             "{}:{}",
             configuration.application.host, configuration.application.port
         );
-    
+
         let listener = TcpListener::bind(address)?;
         let port = listener.local_addr().unwrap().port();
         let server = run(listener, connection_pool, email_client)?;
 
-        Ok(Self { port, server})
+        Ok(Self { port, server })
     }
 
     pub fn port(&self) -> u16 {
@@ -40,7 +48,6 @@ impl Application {
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
         self.server.await
     }
-    
 }
 
 pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
@@ -49,12 +56,14 @@ pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
         .connect_lazy_with(configuration.with_db())
 }
 
-
-
 // we need to mark 'run' as public.
 // it is no longer a binary entrypoint, therefore we can mark it as async
 // without having to use any proc-macro incantation.
-pub fn run(listener: TcpListener, db_pool: PgPool, email_client:EmailClient) -> Result<Server, std::io::Error> {
+pub fn run(
+    listener: TcpListener,
+    db_pool: PgPool,
+    email_client: EmailClient,
+) -> Result<Server, std::io::Error> {
     //Wrap the connection in a smart pointer
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
