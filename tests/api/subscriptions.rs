@@ -1,5 +1,4 @@
 use crate::helpers::spawn_app;
-use reqwest::dns::Resolve;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -98,7 +97,7 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
         assert_eq!(
             400,
             response.status().as_u16(),
-            "The API did not return a 200 OK when the payload was {}.",
+            "The API did not return a 400 when the payload was {}.",
             description
         );
     }
@@ -153,7 +152,7 @@ async fn subscribe_fails_if_there_is_a_fatal_database_error() {
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
     //sabotage database
-    sqlx::query!("ALTER TABLE subscription_tokens DROP COLUMN subscription_token",)
+    sqlx::query!("ALTER TABLE subscriptions DROP COLUMN email",)
         .execute(&app.db_pool)
         .await
         .unwrap();
